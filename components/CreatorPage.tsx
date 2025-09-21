@@ -79,6 +79,7 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ user, setUser, setPage, setIs
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   
   // Audio state
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -124,20 +125,66 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ user, setUser, setPage, setIs
     };
   }, []);
   
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
+  const processFile = async (file: File) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        setError("Veuillez sélectionner un fichier image valide.");
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) { // 10 MB
+        setError("L'image est trop lourde. La taille maximale est de 10 Mo.");
+        return;
+    }
+
+    try {
+        setError('');
+        setIsLoading(true, "Traitement de l'image...");
         const base64 = await fileToBase64(file);
         setSourceImage({ base64, dataUrl: URL.createObjectURL(file), file });
         setGeneratedMedia(null);
         setIsMirrored(false);
-      } catch (err) {
+    } catch (err) {
         setError('Erreur lors de la lecture du fichier.');
         console.error(err);
-      }
+    } finally {
+        setIsLoading(false);
     }
-  }, []);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          processFile(file);
+      }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingOver(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingOver(false);
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+          processFile(files[0]);
+      }
+  };
   
   const handleAudioFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -311,7 +358,14 @@ const CreatorPage: React.FC<CreatorPageProps> = ({ user, setUser, setPage, setIs
         )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="flex flex-col space-y-6">
-              <div className="border-2 border-dashed border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-brand-blue transition-colors h-48 flex flex-col justify-center items-center" onClick={() => fileInputRef.current?.click()}>
+              <div 
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors h-48 flex flex-col justify-center items-center ${isDraggingOver ? 'border-brand-blue bg-brand-blue/10' : 'border-gray-600 hover:border-brand-blue'}`}
+                onClick={() => fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+              >
                 <UploadIcon className="w-10 h-10 text-gray-400 mb-2" />
                 <p className="text-gray-400">Glissez-déposez ou cliquez pour importer</p>
                 <p className="text-xs text-gray-500 mt-1">Images jusqu'à 10MB</p>
