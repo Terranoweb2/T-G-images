@@ -38,3 +38,82 @@ export const applyMirror = (base64Image: string, mimeType: string): Promise<stri
         img.onerror = (error) => reject(error);
     });
 };
+
+export const mergeAudioAndVideo = (videoUrl: string, audioUrl: string, volume: number): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const video = document.createElement('video');
+            video.src = videoUrl;
+            video.muted = true; // The video's own audio track is not needed
+
+            const audioContext = new AudioContext();
+            const audio = document.createElement('audio');
+            audio.src = audioUrl;
+            audio.crossOrigin = "anonymous";
+
+            await Promise.all([
+                new Promise<void>(res => video.onloadedmetadata = () => res()),
+                new Promise<void>(res => audio.onloadedmetadata = () => res())
+            ]);
+            
+            video.currentTime = 0;
+            audio.currentTime = 0;
+
+            const audioSource = audioContext.createMediaElementSource(audio);
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = volume;
+            const destination = audioContext.createMediaStreamDestination();
+            
+            audioSource.connect(gainNode);
+            gainNode.connect(destination);
+
+            const audioTrack = destination.stream.getAudioTracks()[0];
+            
+            const videoElement = video as any;
+            if (!videoElement.captureStream && !videoElement.mozCaptureStream) {
+                 return reject(new Error('Your browser does not support captureStream on video elements.'));
+            }
+
+            const videoStream = videoElement.captureStream ? videoElement.captureStream() : videoElement.mozCaptureStream();
+            const videoTrack = videoStream.getVideoTracks()[0];
+            
+            const combinedStream = new MediaStream([videoTrack, audioTrack]);
+            
+            const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+            const chunks: Blob[] = [];
+
+            recorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    chunks.push(event.data);
+                }
+            };
+            
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                audioContext.close().catch(console.error);
+                resolve(url);
+            };
+
+            recorder.onerror = (event) => {
+                console.error("MediaRecorder error:", event);
+                audioContext.close().catch(console.error);
+                reject(new Error('An error occurred with the MediaRecorder.'));
+            };
+
+            video.onended = () => {
+                if (recorder.state === 'recording') {
+                    recorder.stop();
+                }
+            };
+            
+            recorder.start();
+            await audio.play();
+            await video.play();
+
+        } catch (error) {
+            console.error("Error merging audio and video:", error);
+            reject(error);
+        }
+    });
+};

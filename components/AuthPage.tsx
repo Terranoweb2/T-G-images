@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { User } from '../types';
 import { Page, Plan } from '../types';
-import { LogoIcon } from './Icons';
+import { Logo } from './Icons';
 
 interface AuthPageProps {
   setUser: (user: User) => void;
@@ -61,7 +61,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ setUser, setPage }) => {
     <div className="min-h-screen flex items-center justify-center bg-brand-dark pt-20 px-4">
       <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-gray-900 rounded-xl border border-gray-700">
         <div className="flex flex-col items-center">
-          <LogoIcon className="w-12 h-12 text-brand-blue" />
+          <Logo className="w-16 h-16" />
           <h2 className="mt-4 text-3xl font-bold text-center text-white">
             {isLogin ? 'Connectez-vous' : 'Créez votre compte'}
           </h2>

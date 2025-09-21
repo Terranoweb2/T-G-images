@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { User } from '../types';
 import { Page } from '../types';
-import { LogoIcon, MenuIcon, XIcon } from './Icons';
+import { Logo, MenuIcon, XIcon } from './Icons';
 
 interface HeaderProps {
   user: User | null;
@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ user, setPage, setUser }) => {
       <header className="bg-gray-900/50 backdrop-blur-sm fixed top-0 left-0 right-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={handleLogoClick}>
-            <LogoIcon className="w-8 h-8 text-brand-blue" />
+            <Logo className="w-10 h-10" />
             <h1 className="text-xl sm:text-2xl font-bold text-white">
               T-Glacia Images²
             </h1>
